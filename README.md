@@ -7,9 +7,9 @@ Actuators:
 Water Pump, LED
 
 Modules:
-Water Tank Monitoring: Consists of Water Level Sensor and Water Pump
-Auto Watering: Consists of DHT11 and Soil Moisture Sensor
-Auto Lightening: Consits of GL55 LDR and LED
+1. Water Tank Monitoring: Consists of Water Level Sensor and Water Pump
+2. Auto Watering: Consists of DHT11 and Soil Moisture Sensor
+3. Auto Lightening: Consits of GL55 LDR and LED
 
 Objective:
 Offering a comprehensive solution for automated monitoring and care of plants, which includes watering and supplying light for photosynthesis, while ensuring an adequate water supply in the tank.
