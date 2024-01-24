@@ -4,6 +4,7 @@ CPC357 Smart Plant Nurturing System
 #include <WiFi.h>
 #include <PubSubClient.h>
 #include "DHT.h"
+#include "connection.h"
 
 // Constant for Moisture Sensor (Lower value -> More Moisture)
 int minMoistVal = 4095;
@@ -29,13 +30,6 @@ int lightIntensity = 0;
 // Global flag control
 bool isWaterLow = false;
 
-// // Set up connection
-// const char *WIFI_SSID = "zzz";    //your WiFi SSID
-// const char *WIFI_PASSWORD = "zzz";  // your password
-// const char *MQTT_SERVER = "34.69.170.161";       // your VM instance public IP address
-// const int MQTT_PORT = 1883;
-// const char *MQTT_TOPIC = "iot";  // MQTT topic
-
 // Input Pin Configuration
 const int DHT_PIN = 42;
 const int DHT_TYPE = DHT11;
@@ -51,18 +45,18 @@ DHT dht(DHT_PIN, DHT_TYPE);
 WiFiClient espClient;
 PubSubClient client(espClient);
 
-// void setup_wifi() {
-//   delay(10);
-//   Serial.println("Connecting to WiFi...");
-//   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-//   while (WiFi.status() != WL_CONNECTED) {
-//     delay(500);
-//     Serial.print(".");
-//   }
-//   Serial.println("WiFi connected");
-//   Serial.println("IP address: ");
-//   Serial.println(WiFi.localIP());
-// }
+void setup_wifi() {
+  delay(10);
+  Serial.println("Connecting to WiFi...");
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("WiFi connected");
+  Serial.println("IP address: ");
+  Serial.println(WiFi.localIP());
+}
 
 void setup() {
   pinMode(11, OUTPUT);
@@ -72,29 +66,29 @@ void setup() {
   pinMode (LED_PIN, OUTPUT);
   Serial.begin(115200); 
   dht.begin();
-  // setup_wifi();
-  // client.setServer(MQTT_SERVER, MQTT_PORT);
+  setup_wifi();
+  client.setServer(MQTT_SERVER, MQTT_PORT);
 }
 
-// void reconnect() {
-//   while (!client.connected()) {
-//     Serial.println("Attempting MQTT connection...");
-//     if (client.connect("ESP32Client")) {
-//       Serial.println("Connected to MQTT server");
-//     } else {
-//       Serial.print("Failed, rc=");
-//       Serial.print(client.state());
-//       Serial.println(" Retrying in 5 seconds...");
-//       delay(5000);
-//     }
-//   }
-// }
+void reconnect() {
+  while (!client.connected()) {
+    Serial.println("Attempting MQTT connection...");
+    if (client.connect("ESP32Client")) {
+      Serial.println("Connected to MQTT server");
+    } else {
+      Serial.print("Failed, rc=");
+      Serial.print(client.state());
+      Serial.println(" Retrying in 5 seconds...");
+      delay(5000);
+    }
+  }
+}
 
 void loop() {
-  // if (!client.connected()) {
-  //   reconnect();
-  // }
-  // client.loop();
+  if (!client.connected()) {
+    reconnect();
+  }
+  client.loop();
 
   // Set Peripheral on
   digitalWrite(11, HIGH);
@@ -127,6 +121,13 @@ void monitorWaterTank() {
   Serial.print(waterVal);
   Serial.print(" Water Depth: ");
   Serial.println(depth);
+
+  // Set size
+  char payload[200];
+
+  //Publish
+  sprintf(payload, "Water Value: %.2i Depth: %.2i ", waterVal,depth);
+  client.publish(MQTT_TOPIC_WT, payload);
 
   if (depth < 30) { 
     Serial.println("Water level is low. Please refill the tank.");
@@ -165,6 +166,13 @@ void controlAutoWatering() {
   Serial.print(moistVal);
   Serial.print(" Moisture Percentage: ");
   Serial.println(moistPer);
+
+    // Set size
+  char payload[300];
+
+  //Publish
+  sprintf(payload, "Temperature(c):  %.2f Temperature(F): %.2f Humidity: %.2f Heat Index(c): %.2f Heat Index(F): %.2f Mositure: %.2i  Mositure Percentage:  %.2i", temperatureC, temperatureF, humidity, hic, hif, moistVal, moistPer);
+  client.publish(MQTT_TOPIC_AW, payload);
 
   // High temperature (Frequent Watering -> Longer Watering Duration)
   if (temperatureC > 30) {
@@ -257,6 +265,13 @@ void controlAutoLightening() {
   Serial.print(lightVal);
   Serial.print(" Light Intensity: ");
   Serial.println(lightIntensity);
+
+  // Set size
+  char payload[200];
+
+  //Publish
+  sprintf(payload, "Light Value: %.2i  Light Intensity:  %.2i", lightVal, lightIntensity);
+  client.publish(MQTT_TOPIC_AL, payload);
 
   if (lightIntensity < 40) { // adjust the threshold as needed
     digitalWrite(LED_PIN, HIGH); // turn on LED
