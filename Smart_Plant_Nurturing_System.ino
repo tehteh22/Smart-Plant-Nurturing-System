@@ -15,7 +15,7 @@ int moistPer = 0;
 
 // Constant for Water Level Sensor (Lower value -> Less Water Immersed)
 int minDepthValue = 0;
-int maxDepthValue = 1500;
+int maxDepthValue = 1800;
 int minDepth = 0;
 int maxDepth = 100;
 int depth = 0;
