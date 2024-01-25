@@ -179,12 +179,12 @@ void controlAutoWatering() {
     // Low Humidity & Low Moisture
     if (humidity < 60 && moistPer < 30) {
       digitalWrite(RELAY_PIN, HIGH); // turn on water pump
-      delay(20000); // pump runs for 20 seconds
+      delay(15000); // pump runs for 15 seconds
       digitalWrite(RELAY_PIN, LOW); // turn off water pump
     } // Low Humidty & Medium Moisture 
     else if (humidity < 60 && moistPer >= 30 && moistPer < 70) {
       digitalWrite(RELAY_PIN, HIGH);
-      delay(15000); // pump runs for 15 seconds
+      delay(10000); // pump runs for 10 seconds
       digitalWrite(RELAY_PIN, LOW); 
     } // Low Humidity & High Moisture
      else if (humidity < 60 && moistPer > 70) {
@@ -192,12 +192,12 @@ void controlAutoWatering() {
     } // Medium Humidty & Low Moisture 
     else if (humidity >= 60 && humidity < 80 && moistPer < 30) {
       digitalWrite(RELAY_PIN, HIGH);
-      delay(15000); // pump runs for 15 seconds
+      delay(10000); // pump runs for 10 seconds
       digitalWrite(RELAY_PIN, LOW);
     } // Medium Humidity & Medium Moisture
     else if (humidity >= 60 && humidity < 80 && moistPer >= 30 && moistPer < 70) {
       digitalWrite(RELAY_PIN, HIGH);
-      delay(12000); // pump runs for 12 seconds
+      delay(8000); // pump runs for 8 seconds
       digitalWrite(RELAY_PIN, LOW);
     } // Medium Humidity & High Moisture
      else if (humidity >= 60 && humidity < 80 && moistPer > 70) {
@@ -205,12 +205,12 @@ void controlAutoWatering() {
     } // High Humidity & Low Moisture
     else if (humidity > 80 && moistPer < 30) {
       digitalWrite(RELAY_PIN, HIGH);
-      delay(10000); // pump runs for 10 seconds
+      delay(8000); // pump runs for 8 seconds
       digitalWrite(RELAY_PIN, LOW);
     } // High Humidity & Medium Moisture 
      else if (humidity > 80 && moistPer >= 30 && moistPer < 70) {
       digitalWrite(RELAY_PIN, HIGH);
-      delay(8000); // pump runs for 8 seconds
+      delay(5000); // pump runs for 5 seconds
       digitalWrite(RELAY_PIN, LOW);
     } // High Humidity & High Moisture (No action)
   }
@@ -219,12 +219,12 @@ void controlAutoWatering() {
     // Low Humidity & Low Moisture
     if (humidity < 60 && moistPer < 30) {
       digitalWrite(RELAY_PIN, HIGH); 
-      delay(15000); // pump runs for 15 seconds
+      delay(13000); // pump runs for 13 seconds
       digitalWrite(RELAY_PIN, LOW);
     } // Low Humidty & Medium Moisture 
     else if (humidity < 60 && moistPer >= 30 && moistPer < 70) {
       digitalWrite(RELAY_PIN, HIGH);
-      delay(10000); // pump runs for 10 seconds
+      delay(8000); // pump runs for 8 seconds
       digitalWrite(RELAY_PIN, LOW); 
     }  // Low Humidity & High Moisture
      else if (humidity < 60 && moistPer > 70) {
@@ -232,12 +232,12 @@ void controlAutoWatering() {
     } // Medium Humidty & Low Moisture 
     else if (humidity >= 60 && humidity < 80 && moistPer < 30) {
       digitalWrite(RELAY_PIN, HIGH);
-      delay(10000); // pump runs for 10 seconds
+      delay(8000); // pump runs for 8 seconds
       digitalWrite(RELAY_PIN, LOW);
     } // Medium Humidity & Medium Moisture
     else if (humidity >= 60 && humidity < 80 && moistPer >= 30 && moistPer < 70) {
       digitalWrite(RELAY_PIN, HIGH);
-      delay(8000); // pump runs for 8 seconds
+      delay(5000); // pump runs for 5 seconds
       digitalWrite(RELAY_PIN, LOW);
     } // Medium Humidity & High Moisture
      else if (humidity >= 60 && humidity < 80 && moistPer > 70) {
