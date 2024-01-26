@@ -4,36 +4,39 @@ CPC357 Smart Plant Nurturing System
 #include <WiFi.h>
 #include <PubSubClient.h>
 #include "DHT.h"
+#include "VOneMqttClient.h"
 #include "connection.h"
+#include "environment.h"
 
 // Constant for Moisture Sensor (Lower value -> More Moisture)
 int minMoistVal = 4095;
-int maxMoistVal = 600;
+int maxMoistVal = 100;
 int minMoistPer = 0;
 int maxMoistPer = 100;
 int moistPer = 0;
 
 // Constant for Water Level Sensor (Lower value -> Less Water Immersed)
 int minDepthValue = 0;
-int maxDepthValue = 1800;
+int maxDepthValue = 2400;
 int minDepth = 0;
 int maxDepth = 100;
 int depth = 0;
 
 // Constant for LDR (Lower Value -> Higher Light Intensity)
 int minLDRVal = 4095;
-int maxLDRVal = 500;
+int maxLDRVal = 100;
 int minLDR = 0;
 int maxLDR = 100;
 int lightIntensity = 0;
 
 // Global flag control
 bool isWaterLow = false;
+bool isPumpOn = false;
 
 // Input Pin Configuration
-const int DHT_PIN = 42;
+const int DHT_PIN = 42; // Right side Maker Port
 const int DHT_TYPE = DHT11;
-const int MOIST_PIN = A4;
+const int MOIST_PIN = A4; // Left side Maker Port
 const int LDR_PIN = A2; 
 const int WATER_PIN = A3;
 
@@ -42,12 +45,18 @@ const int RELAY_PIN = A1;
 const int LED_PIN = 21;
 
 DHT dht(DHT_PIN, DHT_TYPE);
-WiFiClient espClient;
-PubSubClient client(espClient);
+
+// Create an instance of VOneMqttClient
+VOneMqttClient voneClient;
+
+// // Cloud Implementation
+// WiFiClient espClient;
+// PubSubClient client(espClient);
 
 void setup_wifi() {
   delay(10);
   Serial.println("Connecting to WiFi...");
+
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
@@ -67,28 +76,41 @@ void setup() {
   Serial.begin(115200); 
   dht.begin();
   setup_wifi();
-  client.setServer(MQTT_SERVER, MQTT_PORT);
+  voneClient.setup();
+  voneClient.registerActuatorCallback(triggerActuator_callback);
+
+  // client.setServer(MQTT_SERVER, MQTT_PORT);
 }
 
-void reconnect() {
-  while (!client.connected()) {
-    Serial.println("Attempting MQTT connection...");
-    if (client.connect("ESP32Client")) {
-      Serial.println("Connected to MQTT server");
-    } else {
-      Serial.print("Failed, rc=");
-      Serial.print(client.state());
-      Serial.println(" Retrying in 5 seconds...");
-      delay(5000);
-    }
-  }
-}
+// void reconnect() {
+//   while (!client.connected()) {
+//     Serial.println("Attempting MQTT connection...");
+//     if (client.connect("ESP32Client")) {
+//       Serial.println("Connected to MQTT server");
+//     } else {
+//       Serial.print("Failed, rc=");
+//       Serial.print(client.state());
+//       Serial.println(" Retrying in 5 seconds...");
+//       delay(5000);
+//     }
+//   }
+// }
 
 void loop() {
-  if (!client.connected()) {
-    reconnect();
+  // if (!client.connected()) {
+  //   reconnect();
+  // }
+  // client.loop();
+
+  if (!voneClient.connected()) {
+    voneClient.reconnect();
+    String errorMsg = "Sensor Fail";
+    voneClient.publishDeviceStatusEvent(Dht11_module, true);
+    voneClient.publishDeviceStatusEvent(Soil_module, true);
+    voneClient.publishDeviceStatusEvent(Water_module, true);
+    voneClient.publishDeviceStatusEvent(GL55_module, true);
   }
-  client.loop();
+  voneClient.loop();
 
   // Set Peripheral on
   digitalWrite(11, HIGH);
@@ -112,6 +134,78 @@ void loop() {
   // client.publish(MQTT_TOPIC, payload);
 }
 
+// V-one actuator triggering function
+void triggerActuator_callback(const char* actuatorDeviceId, const char* actuatorCommand)
+{
+  Serial.print("Main received callback : ");
+  Serial.print(actuatorDeviceId);
+  Serial.print(" : ");
+  Serial.println(actuatorCommand);
+
+  String errorMsg = "";
+
+  JSONVar commandObjct = JSON.parse(actuatorCommand);
+  JSONVar keys = commandObjct.keys();
+
+  if (String(actuatorDeviceId) == Relay_module)
+  {
+    String key = "";
+    String commandValue = "";
+    for (int i = 0; i < keys.length(); i++) {
+      key = (const char* )keys[i];
+      commandValue = (const char* ) commandObjct[keys[i]];
+
+    }
+    Serial.print("Key : ");
+    Serial.println(key.c_str());
+    Serial.print("value : ");
+    Serial.println(commandValue);
+
+    if(commandValue == "OPEN" && !isPumpOn) {
+      Serial.println("Relay ON");
+      digitalWrite(RELAY_PIN, HIGH);
+      isPumpOn = true;
+    } 
+    else if(commandValue == "CLOSE" && isPumpOn) {
+      Serial.println("Relay OFF");
+      digitalWrite(RELAY_PIN, LOW);
+      isPumpOn = false;
+    }
+    voneClient.publishActuatorStatusEvent(actuatorDeviceId, actuatorCommand, errorMsg.c_str(), true);//publish actuator status
+  }
+
+  if(String(actuatorDeviceId) == LED_module) {
+    String key = "";
+    String commandValue = "";
+    for (int i = 0; i < keys.length(); i++) {
+      key = (const char* )keys[i];
+      commandValue = (const char* )commandObjct[keys[i]];
+
+    }
+    Serial.print("Key : ");
+    Serial.println(key.c_str());
+    Serial.print("value : ");
+    Serial.println(commandValue);
+
+    if(commandValue == "ON") {
+      Serial.println("LED ON");
+      digitalWrite(LED_PIN, HIGH);
+    } else if(commandValue == "OFF"){
+      Serial.println("LED OFF");
+      digitalWrite(LED_PIN, LOW);
+    }
+    voneClient.publishActuatorStatusEvent(actuatorDeviceId, actuatorCommand, errorMsg.c_str(), true);//publish actuator status
+  }
+  // else
+  // {
+  //   Serial.print(" No actuator found : ");
+  //   Serial.println(actuatorDeviceId);
+  //   errorMsg = "No actuator found";
+  //   voneClient.publishActuatorStatusEvent(actuatorDeviceId, actuatorCommand, errorMsg.c_str(), false);//publish actuator status
+  // }
+}
+
+
 // Function to monitor the water level in water tank
 void monitorWaterTank() {
   int waterVal = analogRead(WATER_PIN);
@@ -122,12 +216,15 @@ void monitorWaterTank() {
   Serial.print(" Water Depth: ");
   Serial.println(depth);
 
-  // Set size
-  char payload[200];
+  // // Set size
+  // char payload[200];
 
-  //Publish
-  sprintf(payload, "Water Value: %.2i Depth: %.2i ", waterVal,depth);
-  client.publish(MQTT_TOPIC_WT, payload);
+  // //Publish
+  // sprintf(payload, "Water Value: %.2i Depth: %.2i ", waterVal,depth);
+  // client.publish(MQTT_TOPIC_WT, payload);
+
+  // Publish telemtry data
+  voneClient.publishTelemetryData(Water_module, "Depth", depth);
 
   if (depth < 30) { 
     Serial.println("Water level is low. Please refill the tank.");
@@ -167,12 +264,19 @@ void controlAutoWatering() {
   Serial.print(" Moisture Percentage: ");
   Serial.println(moistPer);
 
-    // Set size
-  char payload[300];
+  //   // Set size
+  // char payload[300];
 
-  //Publish
-  sprintf(payload, "Temperature(c):  %.2f Temperature(F): %.2f Humidity: %.2f Heat Index(c): %.2f Heat Index(F): %.2f Mositure: %.2i  Mositure Percentage:  %.2i", temperatureC, temperatureF, humidity, hic, hif, moistVal, moistPer);
-  client.publish(MQTT_TOPIC_AW, payload);
+  // //Publish
+  // sprintf(payload, "Temperature(c):  %.2f Temperature(F): %.2f Humidity: %.2f Heat Index(c): %.2f Heat Index(F): %.2f Mositure: %.2i  Mositure Percentage:  %.2i", temperatureC, temperatureF, humidity, hic, hif, moistVal, moistPer);
+  // client.publish(MQTT_TOPIC_AW, payload);
+
+  // Declare payload object in JSON and publish telemtry data
+  JSONVar payloadObject;
+  payloadObject["Humidity"] = humidity;
+  payloadObject["Temperature"] = temperatureC;
+  voneClient.publishTelemetryData(Dht11_module, payloadObject);
+  voneClient.publishTelemetryData(Soil_module, "Soil moisture", moistPer);
 
   // High temperature (Frequent Watering -> Longer Watering Duration)
   if (temperatureC > 30) {
@@ -266,12 +370,15 @@ void controlAutoLightening() {
   Serial.print(" Light Intensity: ");
   Serial.println(lightIntensity);
 
-  // Set size
-  char payload[200];
+  // // Set size
+  // char payload[200];
 
-  //Publish
-  sprintf(payload, "Light Value: %.2i  Light Intensity:  %.2i", lightVal, lightIntensity);
-  client.publish(MQTT_TOPIC_AL, payload);
+  // //Publish
+  // sprintf(payload, "Light Value: %.2i  Light Intensity:  %.2i", lightVal, lightIntensity);
+  // client.publish(MQTT_TOPIC_AL, payload);
+
+  // Publish telemtry data
+  voneClient.publishTelemetryData(GL55_module, "Light Intensity", lightIntensity);
 
   if (lightIntensity < 40) { // adjust the threshold as needed
     digitalWrite(LED_PIN, HIGH); // turn on LED
